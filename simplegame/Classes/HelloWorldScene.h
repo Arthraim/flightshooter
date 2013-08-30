@@ -20,11 +20,15 @@ public:
     // a selector callback
     void menuCloseCallback(CCObject* pSender);
     
-    void addTarget();
+    void addEnemies(float dt);
+    void addEnemy();
+    void enemyMoveFinished(CCNode* sender);
     
-    void spriteMoveFinished(CCNode* sender);
     
-    void gameLogic(float dt);
+    void fireBullets(float dt);
+    void fireBullet();
+    void bulletMoveFinished(CCNode* sender);
+    
     
     void ccTouchesBegan(cocos2d::CCSet *touches, cocos2d::CCEvent *pEvent);
 //    void ccTouchesEnded(cocos2d::CCSet* touches, cocos2d::CCEvent* event);

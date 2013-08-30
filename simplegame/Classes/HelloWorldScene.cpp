@@ -41,9 +41,8 @@ bool HelloWorld::init()
     this->player->setPosition( ccp(winSize.width/2, this->player->getContentSize().height/2) );
     this->addChild(this->player);
     
-    // cpp with cocos2d-x
-    // Call game logic about every second
-    this->schedule( schedule_selector(HelloWorld::gameLogic), 1.0 );
+    this->schedule( schedule_selector(HelloWorld::addEnemies), 1.0 );
+    this->schedule( schedule_selector(HelloWorld::fireBullets), 1.0/7.0 );
     
     return true;
 }
@@ -57,7 +56,16 @@ void HelloWorld::menuCloseCallback(CCObject* pSender)
 #endif
 }
 
-void HelloWorld::addTarget()
+//
+// enemy
+//
+
+void HelloWorld::addEnemies(float dt)
+{
+    this->addEnemy();
+}
+
+void HelloWorld::addEnemy()
 {
     CCSprite *target = CCSprite::create("shoot.png", ENEMY1_RECT);
     
@@ -85,20 +93,52 @@ void HelloWorld::addTarget()
     CCFiniteTimeAction* actionMove = CCMoveTo::create((float)actualDuration,
                                                       ccp( actualX, 0 - target->getContentSize().height/2) );
     CCFiniteTimeAction* actionMoveDone = CCCallFuncN::create(this,
-                                                             callfuncN_selector(HelloWorld::spriteMoveFinished));
+                                                             callfuncN_selector(HelloWorld::enemyMoveFinished));
     target->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
 }
 
-void HelloWorld::spriteMoveFinished(CCNode* sender)
+void HelloWorld::enemyMoveFinished(CCNode* sender)
 {
     CCSprite *sprite = (CCSprite *)sender;
     this->removeChild(sprite, true);
 }
 
-void HelloWorld::gameLogic(float dt)
+//
+// bullets
+//
+
+void HelloWorld::fireBullets(float dt)
 {
-    this->addTarget();
+    this->fireBullet();
 }
+
+void HelloWorld::fireBullet()
+{
+    CCSprite *bullet = CCSprite::create("shoot.png", BULLET_RECT);
+    
+    CCSize winSize = CCDirector::sharedDirector()->getWinSize();
+
+    CCPoint playerLocation = player->getPosition();
+    bullet->setPosition(CCPoint(playerLocation.x, playerLocation.y + player->getContentSize().height/2));
+    this->addChild(bullet);
+    
+    // Create the actions
+    CCFiniteTimeAction* actionMove = CCMoveTo::create(1.0f,
+                                                      ccp( bullet->getPosition().x, bullet->getPosition().y + winSize.height*3/4) );
+    CCFiniteTimeAction* actionMoveDone = CCCallFuncN::create(this,
+                                                             callfuncN_selector(HelloWorld::bulletMoveFinished));
+    bullet->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
+}
+
+void HelloWorld::bulletMoveFinished(CCNode* sender)
+{
+    CCSprite *sprite = (CCSprite *)sender;
+    this->removeChild(sprite, true);
+}
+
+//
+// hero
+//
 
 void HelloWorld::ccTouchesBegan(CCSet *touches, CCEvent *pEvent)
 {
