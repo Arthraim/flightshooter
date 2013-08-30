@@ -43,17 +43,34 @@ bool HelloWorld::init()
     
     this->schedule( schedule_selector(HelloWorld::addEnemies), 1.0 );
     this->schedule( schedule_selector(HelloWorld::fireBullets), 1.0/7.0 );
+    this->schedule( schedule_selector(HelloWorld::update) );
+    
+    _enemies = new CCArray;
+    _bullets = new CCArray;
     
     return true;
 }
 
-void HelloWorld::menuCloseCallback(CCObject* pSender)
+HelloWorld::HelloWorld():_enemies(NULL),_bullets(NULL)
 {
-    CCDirector::sharedDirector()->end();
+}
 
-#if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)
-    exit(0);
-#endif
+HelloWorld::~HelloWorld()
+{
+    if (_enemies)
+    {
+        _enemies->release();
+        _enemies = NULL;
+    }
+    
+    if (_bullets)
+    {
+        _bullets->release();
+        _bullets = NULL;
+    }
+    
+    // cpp don't need to call super dealloc
+    // virtual destructor will do this
 }
 
 //
@@ -67,20 +84,20 @@ void HelloWorld::addEnemies(float dt)
 
 void HelloWorld::addEnemy()
 {
-    CCSprite *target = CCSprite::create("shoot.png", ENEMY1_RECT);
+    CCSprite *enemy = CCSprite::create("shoot.png", ENEMY1_RECT);
     
     // Determine where to spawn the target along the X axis
     CCSize winSize = CCDirector::sharedDirector()->getWinSize();
-    int minX = target->getContentSize().width/2;
-    int maxX = winSize.width - target->getContentSize().width/2;
+    int minX = enemy->getContentSize().width/2;
+    int maxX = winSize.width - enemy->getContentSize().width/2;
     int rangeX = maxX - minX;
     // srand( TimGetTicks() );
     int actualX = ( rand() % rangeX ) + minX;
     
     // Create the target slightly off-screen along the top edge,
     // and along a random position along the X axis as calculated
-    target->setPosition( ccp(actualX, winSize.height + target->getContentSize().height/2) );
-    this->addChild(target);
+    enemy->setPosition( ccp(actualX, winSize.height + enemy->getContentSize().height/2) );
+    this->addChild(enemy);
     
     // Determine speed of the target
     int minDuration = (int)3.0;
@@ -91,16 +108,20 @@ void HelloWorld::addEnemy()
     
     // Create the actions
     CCFiniteTimeAction* actionMove = CCMoveTo::create((float)actualDuration,
-                                                      ccp( actualX, 0 - target->getContentSize().height/2) );
+                                                      ccp( actualX, 0 - enemy->getContentSize().height/2) );
     CCFiniteTimeAction* actionMoveDone = CCCallFuncN::create(this,
                                                              callfuncN_selector(HelloWorld::enemyMoveFinished));
-    target->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
+    enemy->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
+    
+    enemy->setTag(1);
+    _enemies->addObject(enemy);
 }
 
 void HelloWorld::enemyMoveFinished(CCNode* sender)
 {
     CCSprite *sprite = (CCSprite *)sender;
     this->removeChild(sprite, true);
+    _enemies->removeObject(sprite);
 }
 
 //
@@ -128,12 +149,16 @@ void HelloWorld::fireBullet()
     CCFiniteTimeAction* actionMoveDone = CCCallFuncN::create(this,
                                                              callfuncN_selector(HelloWorld::bulletMoveFinished));
     bullet->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
+    
+    bullet->setTag(2);
+    _bullets->addObject(bullet);
 }
 
 void HelloWorld::bulletMoveFinished(CCNode* sender)
 {
     CCSprite *sprite = (CCSprite *)sender;
     this->removeChild(sprite, true);
+    _bullets->removeObject(sprite);
 }
 
 //
@@ -172,49 +197,53 @@ void HelloWorld::ccTouchesMoved(CCSet *touches, CCEvent* event)
     this->player->setPosition(CCPoint(newX, newY));
 }
 
-//void HelloWorld::ccTouchesEnded(CCSet* touches, CCEvent* event)
-//{
-//    // Choose one of the touches to work with
-//    CCTouch* touch = (CCTouch*)( touches->anyObject() );
-//    CCPoint location = touch->getLocationInView();
-//    location = CCDirector::sharedDirector()->convertToGL(location);
-//    
-//    // Set up initial location of projectile
-//    CCSize winSize = CCDirector::sharedDirector()->getWinSize();
-//    CCSprite *projectile = CCSprite::create("shoot.png", BULLET_RECT);
-//    projectile->setPosition( ccp(20, winSize.height/2) );
-//    
-//    // Determinie offset of location to projectile
-//    int offX = location.x - projectile->getPosition().x;
-//    int offY = location.y - projectile->getPosition().y;
-//    
-//    // Bail out if we are shooting down or backwards
-//    if (offX <= 0) return;
-//    
-//    // Ok to add now - we've double checked position
-//    this->addChild(projectile);
-//    
-//    // Determine where we wish to shoot the projectile to
-//    int realX = winSize.width
-//    + (projectile->getContentSize().width/2);
-//    float ratio = (float)offY / (float)offX;
-//    int realY = (realX * ratio) + projectile->getPosition().y;
-//    CCPoint realDest = ccp(realX, realY);
-//    
-//    // Determine the length of how far we're shooting
-//    int offRealX = realX - projectile->getPosition().x;
-//    int offRealY = realY - projectile->getPosition().y;
-//    float length = sqrtf((offRealX * offRealX)
-//                         + (offRealY*offRealY));
-//    float velocity = 480/1; // 480pixels/1sec
-//    float realMoveDuration = length/velocity;
-//    
-//    // Move projectile to actual endpoint
-//    projectile->runAction( CCSequence::create(
-//                                              CCMoveTo::create(realMoveDuration, realDest),
-//                                              CCCallFuncN::create(this,
-//                                                                  
-//                                                                  callfuncN_selector(HelloWorld::spriteMoveFinished)), 
-//                                              NULL) );
-//}
+
+void HelloWorld::update(float dt)
+{
+    CCArray *bulletsToDelete = new CCArray;
+    CCArray* enemiesToDelete =new CCArray;
+    CCObject* it = NULL;
+    CCObject* jt = NULL;
+    
+    CCARRAY_FOREACH(_bullets, it)
+    {
+        CCSprite *bullet = dynamic_cast<CCSprite*>(it);
+        CCRect bulletRect = CCRectMake(bullet->getPosition().x - (bullet->getContentSize().width/2),
+                                       bullet->getPosition().y - (bullet->getContentSize().height/2),
+                                       bullet->getContentSize().width,
+                                       bullet->getContentSize().height);
+        
+        CCARRAY_FOREACH(_enemies, jt)
+        {
+            CCSprite *enemy = dynamic_cast<CCSprite*>(jt);
+            CCRect enemyRect = CCRectMake(enemy->getPosition().x - (enemy->getContentSize().width/2),
+                                          enemy->getPosition().y - (enemy->getContentSize().height/2),
+                                          enemy->getContentSize().width,
+                                          enemy->getContentSize().height);
+            
+            if (bulletRect.intersectsRect(enemyRect))
+            {
+                enemiesToDelete->addObject(enemy);
+                bulletsToDelete->addObject(bullet);
+            }
+        }
+    }
+    
+    CCARRAY_FOREACH(enemiesToDelete, jt)
+    {
+        CCSprite *enemy = dynamic_cast<CCSprite*>(jt);
+        _enemies->removeObject(enemy);
+        this->removeChild(enemy, true);
+    }
+    
+    CCARRAY_FOREACH(bulletsToDelete, it)
+    {
+        CCSprite* bullet = dynamic_cast<CCSprite*>(it);
+        _bullets->removeObject(bullet);
+        this->removeChild(bullet, true);
+    }
+    
+    bulletsToDelete->release();
+    enemiesToDelete->release();
+}
 
