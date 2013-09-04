@@ -12,12 +12,12 @@ using namespace cocos2d;
 
 #define ENEMY1_RECT     CCRectMake(534, 612, 57, 43)
 
-Enemy::Enemy(int type):_sprite(NULL),_destroyAnimation(NULL),_destroyAnimate(NULL)
+Enemy::Enemy(int type):_destroyAnimation(NULL),_destroyAnimate(NULL)
 {
     switch (type) {
         case 1:
         {
-            _sprite = CCSprite::create("shoot.png", ENEMY1_RECT);
+            initWithFile("shoot.png", ENEMY1_RECT);
             _healthPoint = 1;
             _currentStatus = ENEMY_STATUS_ALIVE;
         }
@@ -30,15 +30,6 @@ Enemy::Enemy(int type):_sprite(NULL),_destroyAnimation(NULL),_destroyAnimate(NUL
 
 Enemy::~Enemy()
 {
-    if (_sprite) {
-        _sprite->release();
-        _sprite = NULL;
-    }
-}
-
-CCSprite* Enemy::getSprite()
-{
-    return _sprite;
 }
 
 int Enemy::getHP()

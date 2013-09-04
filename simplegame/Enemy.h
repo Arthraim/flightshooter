@@ -17,10 +17,9 @@ typedef enum EnemyStatus {
     ENEMY_STATUS_DESTROYING
 } EnemyStatus;
 
-class Enemy : public cocos2d::CCObject {
+class Enemy : public cocos2d::CCSprite {
     EnemyStatus _currentStatus;
-    
-    cocos2d::CCSprite *_sprite;
+
     int _healthPoint;
     
     cocos2d::CCAnimation *_destroyAnimation;
@@ -29,8 +28,7 @@ class Enemy : public cocos2d::CCObject {
 public:
     Enemy(int type);
     ~Enemy();
-    
-    cocos2d::CCSprite *getSprite();
+
     int getHP();
     int minusHP();
     EnemyStatus getCurrentStatus();
