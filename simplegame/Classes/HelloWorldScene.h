@@ -2,6 +2,7 @@
 #define __HELLOWORLD_SCENE_H__
 
 #include "cocos2d.h"
+#include "Enemy.h"
 
 class HelloWorld : public cocos2d::CCLayerColor
 {
@@ -19,10 +20,12 @@ public:
     cocos2d::CCSprite *player;
     cocos2d::CCPoint touchOffset;
     
+    // animations
+    cocos2d::CCAnimation *playerAnimation;
+    
     void addEnemies(float dt);
     void addEnemy();
-    void enemyMoveFinished(CCNode* sender);
-    
+    void removeEnemy(CCNode *sender);
     
     void fireBullets(float dt);
     void fireBullet();

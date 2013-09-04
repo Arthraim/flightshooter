@@ -1,5 +1,6 @@
 #include "HelloWorldScene.h"
 #include "SimpleAudioEngine.h"
+#include "Enemy.h"
 
 using namespace cocos2d;
 using namespace CocosDenshion;
@@ -42,13 +43,13 @@ bool HelloWorld::init()
     this->player->setPosition( ccp(winSize.width/2, this->player->getContentSize().height/2) );
     this->addChild(this->player);
     
-    CCAnimation *animation = CCAnimation::create();
+    this->playerAnimation = CCAnimation::create();
     CCSpriteFrame *sframe = CCSpriteFrame::create("shoot.png", HERO2_RECT);
-    animation->addSpriteFrame(sframe);
+    this->playerAnimation->addSpriteFrame(sframe);
     CCSpriteFrame *sframe2 = CCSpriteFrame::create("shoot.png", HERO1_RECT);
-    animation->addSpriteFrame(sframe2);
-    animation->setDelayPerUnit(0.1);
-    CCAnimate *animate = CCAnimate::create(animation);
+    this->playerAnimation->addSpriteFrame(sframe2);
+    this->playerAnimation->setDelayPerUnit(0.1);
+    CCAnimate *animate = CCAnimate::create(this->playerAnimation);
     player->runAction(CCRepeatForever::create(animate));
     
     this->schedule( schedule_selector(HelloWorld::addEnemies), 1.0 );
@@ -94,20 +95,22 @@ void HelloWorld::addEnemies(float dt)
 
 void HelloWorld::addEnemy()
 {
-    CCSprite *enemy = CCSprite::create("shoot.png", ENEMY1_RECT);
+//    CCSprite *enemy = CCSprite::create("shoot.png", ENEMY1_RECT);
+    Enemy *enemy = new Enemy(1);
+    CCSprite *enemySprite = enemy->getSprite();
     
     // Determine where to spawn the target along the X axis
     CCSize winSize = CCDirector::sharedDirector()->getWinSize();
-    int minX = enemy->getContentSize().width/2;
-    int maxX = winSize.width - enemy->getContentSize().width/2;
+    int minX = enemySprite->getContentSize().width/2;
+    int maxX = winSize.width - enemySprite->getContentSize().width/2;
     int rangeX = maxX - minX;
     // srand( TimGetTicks() );
     int actualX = ( rand() % rangeX ) + minX;
     
     // Create the target slightly off-screen along the top edge,
     // and along a random position along the X axis as calculated
-    enemy->setPosition( ccp(actualX, winSize.height + enemy->getContentSize().height/2) );
-    this->addChild(enemy);
+    enemySprite->setPosition( ccp(actualX, winSize.height + enemySprite->getContentSize().height/2) );
+    this->addChild(enemySprite);
     
     // Determine speed of the target
     int minDuration = (int)3.0;
@@ -118,20 +121,23 @@ void HelloWorld::addEnemy()
     
     // Create the actions
     CCFiniteTimeAction* actionMove = CCMoveTo::create((float)actualDuration,
-                                                      ccp( actualX, 0 - enemy->getContentSize().height/2) );
+                                                      ccp( actualX, 0 - enemySprite->getContentSize().height/2) );
     CCFiniteTimeAction* actionMoveDone = CCCallFuncN::create(this,
-                                                             callfuncN_selector(HelloWorld::enemyMoveFinished));
-    enemy->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
+                                                             callfuncN_selector(HelloWorld::removeEnemy));
+    enemySprite->runAction( CCSequence::create(actionMove, actionMoveDone, NULL) );
     
-    enemy->setTag(1);
+    enemySprite->setTag(1);
     _enemies->addObject(enemy);
 }
 
-void HelloWorld::enemyMoveFinished(CCNode* sender)
+void HelloWorld::removeEnemy(CCNode *sender)
 {
-    CCSprite *sprite = (CCSprite *)sender;
-    this->removeChild(sprite, true);
-    _enemies->removeObject(sprite);
+    CCSprite *sprite = dynamic_cast<CCSprite*>(sender);
+    //    enemy->getSprite()->stopAllActions();
+    //    this->removeChild(enemy->getSprite(), true);
+    sprite->removeFromParentAndCleanup(true);
+//    _enemies->removeObject(enemy);
+#warning this must remove from array
 }
 
 //
@@ -225,11 +231,23 @@ void HelloWorld::update(float dt)
         
         CCARRAY_FOREACH(_enemies, jt)
         {
-            CCSprite *enemy = dynamic_cast<CCSprite*>(jt);
-            CCRect enemyRect = CCRectMake(enemy->getPosition().x - (enemy->getContentSize().width/2),
-                                          enemy->getPosition().y - (enemy->getContentSize().height/2),
-                                          enemy->getContentSize().width,
-                                          enemy->getContentSize().height);
+            Enemy *enemy = dynamic_cast<Enemy*>(jt);
+            
+            if (!enemy) {
+                continue;
+            }
+            if (!enemy->getSprite()) {
+                continue;
+            }
+            if (enemy->getCurrentStatus() == ENEMY_STATUS_DESTROYING) {
+                continue;
+            }
+            
+            CCSprite *enemySprite = enemy->getSprite();
+            CCRect enemyRect = CCRectMake(enemySprite->getPosition().x - (enemySprite->getContentSize().width/2),
+                                          enemySprite->getPosition().y - (enemySprite->getContentSize().height/2),
+                                          enemySprite->getContentSize().width,
+                                          enemySprite->getContentSize().height);
             
             if (bulletRect.intersectsRect(enemyRect))
             {
@@ -241,9 +259,12 @@ void HelloWorld::update(float dt)
     
     CCARRAY_FOREACH(enemiesToDelete, jt)
     {
-        CCSprite *enemy = dynamic_cast<CCSprite*>(jt);
-        _enemies->removeObject(enemy);
-        this->removeChild(enemy, true);
+        Enemy *enemy = dynamic_cast<Enemy*>(jt);
+        enemy->getSprite()->stopAllActions();
+        
+        CCAnimate *animAction = enemy->destroyAnimation();
+        CCCallFuncN *callFunc = CCCallFuncN::create(this, callfuncN_selector(HelloWorld::removeEnemy));
+        enemy->getSprite()->runAction(CCSequence::create(animAction, callFunc, NULL));
     }
     
     CCARRAY_FOREACH(bulletsToDelete, it)
