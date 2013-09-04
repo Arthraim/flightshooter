@@ -4,7 +4,8 @@
 using namespace cocos2d;
 using namespace CocosDenshion;
 
-#define HERO_RECT       CCRectMake(0, 99, 102, 126)
+#define HERO1_RECT       CCRectMake(0, 99, 102, 126)
+#define HERO2_RECT       CCRectMake(165, 360, 102, 126)
 #define ENEMY1_RECT     CCRectMake(534, 612, 57, 43)
 #define BULLET_RECT     CCRectMake(1004, 987, 9, 21)
 
@@ -37,9 +38,18 @@ bool HelloWorld::init()
     this->setTouchEnabled(true); //this->setIsTouchEnabled(true);
 
     CCSize winSize = CCDirector::sharedDirector()->getWinSize();
-    this->player = CCSprite::create("shoot.png", HERO_RECT );
+    this->player = CCSprite::create("shoot.png", HERO1_RECT );
     this->player->setPosition( ccp(winSize.width/2, this->player->getContentSize().height/2) );
     this->addChild(this->player);
+    
+    CCAnimation *animation = CCAnimation::create();
+    CCSpriteFrame *sframe = CCSpriteFrame::create("shoot.png", HERO2_RECT);
+    animation->addSpriteFrame(sframe);
+    CCSpriteFrame *sframe2 = CCSpriteFrame::create("shoot.png", HERO1_RECT);
+    animation->addSpriteFrame(sframe2);
+    animation->setDelayPerUnit(0.1);
+    CCAnimate *animate = CCAnimate::create(animation);
+    player->runAction(CCRepeatForever::create(animate));
     
     this->schedule( schedule_selector(HelloWorld::addEnemies), 1.0 );
     this->schedule( schedule_selector(HelloWorld::fireBullets), 1.0/7.0 );
