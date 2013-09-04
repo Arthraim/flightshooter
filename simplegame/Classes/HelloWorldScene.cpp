@@ -135,8 +135,7 @@ void HelloWorld::removeEnemy(CCNode *sender)
     //    enemy->getSprite()->stopAllActions();
     //    this->removeChild(enemy->getSprite(), true);
     sprite->removeFromParentAndCleanup(true);
-//    _enemies->removeObject(enemy);
-#warning this must remove from array
+    _enemies->removeObject(sprite);
 }
 
 //
