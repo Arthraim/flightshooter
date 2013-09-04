@@ -246,8 +246,10 @@ void HelloWorld::update(float dt)
             
             if (bulletRect.intersectsRect(enemyRect))
             {
-                enemiesToDelete->addObject(enemy);
                 bulletsToDelete->addObject(bullet);
+                if (enemy->minusHP() <= 0) {
+                    enemiesToDelete->addObject(enemy);
+                }
             }
         }
     }
